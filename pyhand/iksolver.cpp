@@ -4,6 +4,7 @@
 #include <string>
 #include <exception>
 #include <stdexcept>
+#include <random>
 #include "pyutil.hpp"
 
 using namespace std;
@@ -31,7 +32,7 @@ struct Vec4d
   }
 };
 
-std::ostream& operator<<(ostream&os, const Vec4d&o) 
+std::ostream& operator<<(ostream&os, const Vec4d&o)
 {
   os << "[" << o.values[0] << ", " << o.values[1] << ", " << o.values[2] << ", " << o.values[3] << "] ";
   return os;
@@ -50,11 +51,11 @@ public:
   map<string,double> null_solution;
   map<string,double> regularizers;
   float step_size;
-  
+
   IK()
   {
   }
-  
+
   double objective_cost(map<string,Vec4d>&target_positions,map<string,double>&solution)
   {
     // compute target component
@@ -76,7 +77,7 @@ public:
 	ssd += C * diff * diff;
       }
     }
-    
+
     return ssd;
   }
 
@@ -94,16 +95,16 @@ public:
 	param.second += distribution(generator);
       ++iter;
     }
-    
+
     return sol_prime;
   }
 
   map<string,double> perturb_solution_gradient(map<string,Vec4d>&targets,map<string,double>&solution)
   {
     map<string,double> sp;
-    
+
     for(auto && param : solution)
-    {        
+    {
       // data gradient
       double grad = 0;
       for(auto && target : targets)
@@ -114,9 +115,9 @@ public:
 	  grad += 2 * (cur_pos.values[i] - target.second.values[i]) * diff(target.first,param.first,i,solution);
 	}
       }
-      
+
       // regularizer gradient
-      auto null_value = null_solution.at(param.first);	
+      auto null_value = null_solution.at(param.first);
       double C = regularizers.at(param.first);
       double diff = null_value - param.second;
       grad += C * -2 * diff;
@@ -136,7 +137,7 @@ public:
       return perturb_solution_gradient(target,solution);
     else
       return perturb_solution_random(solution);
-  }  
+  }
 
   void print_match(map<string,Vec4d>&target_positions,map<string,double>&solution)
   {
@@ -176,7 +177,7 @@ public:
     }
     return target;
   }
-  
+
   void set_null_solution(boost::python::dict null_solution)
   {
     // convert init solution
@@ -187,12 +188,12 @@ public:
   {
     // convert init solution
     this->regularizers = extract_solution(py_reguarizers);
-  }  
+  }
 
   void optimize(map<string,Vec4d>&target,map<string,double>&sol)
   {
     ScopedGILRelease unlock;
-    
+
     double start_cost = objective_cost(target,sol);
     double best_cost = start_cost;
     cout << "init cost = " << best_cost << endl;
@@ -217,14 +218,14 @@ public:
 	cout << "iter " << iter << " of " << 50000 << endl;
       }
     }
-    
+
     print_match(target,sol);
-    cout << "init cost = " << start_cost << endl;    
+    cout << "init cost = " << start_cost << endl;
     cout << "final cost = " << objective_cost(target,sol) << endl;
   }
-  
+
   boost::python::dict solve(boost::python::dict target_positions,boost::python::dict init_solution)
-  {   
+  {
     // convert arguments
     map<string,Vec4d> target = extract_targets(target_positions);
 
@@ -232,10 +233,10 @@ public:
     map<string,double> sol = extract_solution(init_solution);
 
     // OPTIMIZE THE DAMN THING!!!
-    {      
+    {
       optimize(target,sol);
     }
-    
+
     // convert to output
     boost::python::dict dictionary;
     for(auto && param : sol)
